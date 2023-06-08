@@ -97,8 +97,8 @@ def astar(graph, start, goal):
 opening, walkway_graph = segment_walkway(image)
 
 # Define the start and goal positions
-start = (26, 276)
-goal = (50, 277)
+start = (551, 0)
+goal = (768, 666)
 
 # Find the optimal path using A* algorithm
 path = astar(walkway_graph, start, goal)

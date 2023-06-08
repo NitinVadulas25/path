@@ -60,3 +60,4 @@ print("Walkable Pixels:")
 for pixel in walkable_pixels:
     print(pixel)
     
+    
