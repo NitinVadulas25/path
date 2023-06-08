@@ -2,58 +2,54 @@ import cv2
 import numpy as np
 from queue import PriorityQueue
 
-#reads the image
+# reads the image
 image = cv2.imread("four.jpeg")
 
-#if the image cant be read or if its in the wrong directory it prints failed
+# if the image cant be read or if its in the wrong directory it prints failed
 if image is None:
     print("Failed to load image")
     exit()
 
 
-
-#method of converting the image to binary (black and white)
-#returns graph representation of walkway
-#neighbors are neighboring nodes (3 per node)
+# method of converting the image to binary (black and white)
+# returns graph representation of walkway
+# neighbors are neighboring nodes (3 per node)
 def segment_walkway(image):
-    #colored to gray image
+    # colored to gray image
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    #noise removal (blur)
+    # noise removal (blur)
     preprocessed = cv2.medianBlur(gray, 5)
 
     # thresholding of black and white, increased threshold
     # means computer must be 'more sure' that the part is what it is
-    _, binary = cv2.threshold(preprocessed, 0, 250, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+    _, binary = cv2.threshold(preprocessed, 0, 250, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
-    #morphological operation to clean up
+    # morphological operation to clean up
     kernel = np.ones((3, 3), np.uint8)
     opening = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel, iterations=2)
 
     # Define the grid size
     grid_height, grid_width = opening.shape
 
-
-    
-
     # Define the connectivity between nodes
     def get_neighbors(x, y):
         neighbors = []
-        if x > 0 and opening[y, x-1] == 0:
+        if x > 0 and opening[y, x - 1] == 0:
             neighbors.append((x - 1, y))
-        if x < grid_width - 1 and opening[y, x+1] == 0:
+        if x < grid_width - 1 and opening[y, x + 1] == 0:
             neighbors.append((x + 1, y))
-        if y > 0 and opening[y-1, x] == 0:
+        if y > 0 and opening[y - 1, x] == 0:
             neighbors.append((x, y - 1))
-        if y < grid_height - 1 and opening[y+1, x] == 0:
+        if y < grid_height - 1 and opening[y + 1, x] == 0:
             neighbors.append((x, y + 1))
         return neighbors
-    
-    #code inits a dictionary graph thats empty represents the walkway
-    #iterates over each pixel, if walkable add to dict
-    #if walkable it assigns a nodeid
-    #if walkable go to getneighbors and get the neighboring pixels
-    #node id is unique (key)
+
+    # code inits a dictionary graph thats empty represents the walkway
+    # iterates over each pixel, if walkable add to dict
+    # if walkable it assigns a nodeid
+    # if walkable go to getneighbors and get the neighboring pixels
+    # node id is unique (key)
     graph = {}
     for y in range(grid_height):
         for x in range(grid_width):
@@ -63,6 +59,7 @@ def segment_walkway(image):
                 graph[node_id] = neighbors
 
     return opening, graph  # Return the processed image and the graph representation
+
 
 # A* algorithm implementation
 def astar(graph, start, goal):
@@ -106,6 +103,7 @@ def astar(graph, start, goal):
 
     return None
 
+
 # Segment the walkway and obtain the processed image and the graph representation
 opening, walkway_graph = segment_walkway(image)
 
@@ -132,7 +130,7 @@ opening_bgr = cv2.cvtColor(opening, cv2.COLOR_GRAY2BGR)
 
 # Draw the thick red line on the processed image
 for i in range(len(path) - 1):
-    cv2.line(opening_bgr, path[i], path[i+1], (0, 0, 255), 5)
+    cv2.line(opening_bgr, path[i], path[i + 1], (0, 0, 255), 5)
 
 # Display the modified image with the red line
 cv2.imshow('Optimal Path', opening_bgr)
