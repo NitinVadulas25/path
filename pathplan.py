@@ -67,7 +67,8 @@ def astar(graph, start, goal):
     def heuristic(node, goal):
         x1, y1 = node
         x2, y2 = goal
-        return abs(x1 - x2) + abs(y1 - y2)
+        return np.sqrt((x1 - x2)**2 + (y1 - y2)**2)
+
 
     # Define the cost function
     def cost(current, next):
@@ -108,8 +109,8 @@ def astar(graph, start, goal):
 opening, walkway_graph = segment_walkway(image)
 
 # Define the start and goal positions
-start = (551, 0)
-goal = (768, 666)
+start = (617, 8)
+goal = (450, 659)
 
 # Find the optimal path using A* algorithm
 path = astar(walkway_graph, start, goal)

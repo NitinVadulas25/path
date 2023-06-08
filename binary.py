@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 # Read the image
-image = cv2.imread("three.jpeg")
+image = cv2.imread("four.jpeg")
 
 if image is None:
     print("Failed to load image")
