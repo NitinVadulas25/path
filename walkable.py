@@ -46,7 +46,7 @@ def segment_walkway(image):
     return graph, walkable_pixels
 
 # Read the image
-image = cv2.imread("four.jpeg")
+image = cv2.imread("IMG_7458.JPG")
 
 if image is None:
     print("Failed to load image")

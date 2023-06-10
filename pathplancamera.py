@@ -1,34 +1,23 @@
 import cv2
 import numpy as np
 from queue import PriorityQueue
+import requests
 
-# reads the image
-image = cv2.imread("IMG_7458.JPG")
-#CONSIDER RESIZING
-
-
-
-# if the image cant be read or if its in the wrong directory it prints failed
-if image is None:
-    print("Failed to load image")
-    exit()
-
-
-# method of converting the image to binary (black and white)
-# returns graph representation of walkway
-# neighbors are neighboring nodes (3 per node)
+# Method of converting the image to binary (black and white)
+# Returns graph representation of walkway
+# Neighbors are neighboring nodes (3 per node)
 def segment_walkway(image):
-    # colored to gray image
+    # Colored to gray image
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    # noise removal (blur)
+    # Noise removal (blur)
     preprocessed = cv2.medianBlur(gray, 5)
 
-    # thresholding of black and white, increased threshold
+    # Thresholding of black and white, increased threshold
     # means computer must be 'more sure' that the part is what it is
     _, binary = cv2.threshold(preprocessed, 0, 250, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
-    # morphological operation to clean up
+    # Morphological operation to clean up
     kernel = np.ones((3, 3), np.uint8)
     opening = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel, iterations=2)
 
@@ -48,11 +37,11 @@ def segment_walkway(image):
             neighbors.append((x, y + 1))
         return neighbors
 
-    # code inits a dictionary graph thats empty represents the walkway
-    # iterates over each pixel, if walkable add to dict
-    # if walkable it assigns a nodeid
-    # if walkable go to getneighbors and get the neighboring pixels
-    # node id is unique (key)
+    # Code initializes an empty dictionary graph that represents the walkway
+    # Iterates over each pixel, if walkable add to dict
+    # If walkable, it assigns a node id
+    # If walkable, go to get_neighbors and get the neighboring pixels
+    # Node id is unique (key)
     graph = {}
     for y in range(grid_height):
         for x in range(grid_width):
@@ -70,8 +59,7 @@ def astar(graph, start, goal):
     def heuristic(node, goal):
         x1, y1 = node
         x2, y2 = goal
-        return np.sqrt((x1 - x2)**2 + (y1 - y2)**2)
-
+        return np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
 
     # Define the cost function
     def cost(current, next):
@@ -108,35 +96,52 @@ def astar(graph, start, goal):
     return None
 
 
-# Segment the walkway and obtain the processed image and the graph representation
-opening, walkway_graph = segment_walkway(image)
-
 # Define the start and goal positions
-start = (206, 417)
-goal = (224, 374)
+start = (617, 8)
+goal = (450, 659)
 
-# Find the optimal path using A* algorithm
-path = astar(walkway_graph, start, goal)
+# Initialize the camera
+camera = cv2.VideoCapture(0)  # Use 0 for the default camera
 
-# Print the path
-if path is not None:
-    print("Optimal Path:")
-    for node in path:
-        print(node)
-else:
-    print("No path found.")
+# Server URL to send the processed frames
+server_url = "http://<SERVER_IP_ADDRESS>:<PORT>/process_frame"
 
-# Convert the processed image to the np.uint8 data type
-opening = opening.astype(np.uint8)
+while True:
+    # Read the current frame from the camera
+    ret, frame = camera.read()
 
-# Convert the grayscale image to BGR format
-opening_bgr = cv2.cvtColor(opening, cv2.COLOR_GRAY2BGR)
+    if not ret:
+        print("Failed to read frame from camera")
+        break
 
-# Draw the thick red line on the processed image
-for i in range(len(path) - 1):
-    cv2.line(opening_bgr, path[i], path[i + 1], (0, 0, 255), 5)
+    # Segment the walkway and obtain the processed image and the graph representation
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    preprocessed = cv2.medianBlur(gray, 5)
+    _, binary = cv2.threshold(preprocessed, 0, 250, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    kernel = np.ones((3, 3), np.uint8)
+    opening = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel, iterations=2)
 
-# Display the modified image with the red line
-cv2.imshow('Optimal Path', opening_bgr)
-cv2.waitKey(0)
+    opening, walkway_graph = segment_walkway(frame)
+
+    # Find the optimal path using A* algorithm
+    path = astar(walkway_graph, start, goal)
+
+    # Draw the path on the frame
+    if path is not None:
+        for i in range(len(path) - 1):
+            cv2.line(frame, path[i], path[i + 1], (0, 0, 255), 5)
+
+    # Send the processed frame to the server
+    _, img_encoded = cv2.imencode('.jpg', frame)
+    response = requests.post(server_url, files={'frame': img_encoded.tostring()})
+
+    # Display the frame with the path
+    cv2.imshow('Live Stream', frame)
+
+    # Exit the loop if 'q' is pressed
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+# Release the camera and close windows
+camera.release()
 cv2.destroyAllWindows()
